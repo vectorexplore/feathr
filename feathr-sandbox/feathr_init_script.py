@@ -15,10 +15,33 @@ from feathr import TypedKey
 from pyspark.sql import DataFrame
 import feathr
 from pathlib import Path
+import logging
+import sys
+
+def set_custom_logger(name):
+    formatter = logging.Formatter(
+                    fmt='%(asctime)s - %(levelname)s - %(module)s - %(message)s'
+                )
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+    return logger
+
+logger = set_custom_logger('root')
 
 print(feathr.__version__)
 
-os.environ['SPARK_LOCAL_IP'] = "127.0.0.1"
+
+#os.environ['SPARK_LOCAL_IP'] = "127.0.0.1"
+# TODO: from env
+nn_host = 'changeit' #'192.168.1.7'
+nn_port = '9000'
+nn_url_prefix = 'hdfs://' + nn_host + ':' + nn_port 
+os.environ['SPARK_LOCAL_IP'] = nn_host
 os.environ['REDIS_PASSWORD'] = "foobared"  # default password for Redis
 
 # Make sure we get the Feathr jar name, assuming we just have one jar file.
@@ -37,7 +60,8 @@ spark_config:
   spark_cluster: 'local'
   spark_result_output_parts: '1'
   local:
-    master: 'local[*]'
+    # master: 'local[*]'
+    master: 'yarn'
     feathr_runtime_location: "{jar_name}"
 
 online_store:
@@ -55,14 +79,22 @@ feathr_workspace_folder = Path("./feathr_config.yaml")
 feathr_workspace_folder.parent.mkdir(exist_ok=True, parents=True)
 feathr_workspace_folder.write_text(yaml_config)
 
+local_workspace_dir = '/tmp/feathr-demo-workspace'
+hdfs_workspace_dir = local_workspace_dir
 
-client = FeathrClient(str(feathr_workspace_folder))
-DATA_FILE_PATH = "/tmp/green_tripdata_2020-04_with_index.csv"
+client = FeathrClient(str(feathr_workspace_folder), local_workspace_dir)
+# TODO: support file system only,copy to hdfs
+DATA_FILE_PATH = "/data/green_tripdata_2020-04_with_index.csv"
+local_data_file = local_workspace_dir + DATA_FILE_PATH
+
 from feathr.datasets.utils import maybe_download
 from feathr.datasets.constants import NYC_TAXI_SMALL_URL
 
-maybe_download(src_url=NYC_TAXI_SMALL_URL, dst_filepath=DATA_FILE_PATH)
+maybe_download(src_url=NYC_TAXI_SMALL_URL, dst_filepath=local_data_file)
 
+from pyarrow import fs
+hdfs_data_file = hdfs_workspace_dir + DATA_FILE_PATH
+fs.copy_files(local_data_file, nn_url_prefix + hdfs_data_file)
 
 TIMESTAMP_COL = "lpep_dropoff_datetime"
 TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss"
@@ -77,7 +109,7 @@ def preprocessing(df: DataFrame) -> DataFrame:
 
 batch_source = HdfsSource(
     name="nycTaxiBatchSource",
-    path=DATA_FILE_PATH,
+    path=hdfs_data_file,
     event_timestamp_column=TIMESTAMP_COL,
     preprocessing=preprocessing,
     timestamp_format=TIMESTAMP_FORMAT,
@@ -190,7 +222,7 @@ client.build_features(
 
 
 feature_names = [feature.name for feature in features + agg_features]
-feature_names
+print(feature_names)
 
 
 # Try to register the service after the spark run (so that the Feathr API can start with sufficient time)
@@ -210,18 +242,26 @@ query = FeatureQuery(
     key=agg_key,
 )
 settings = ObservationSettings(
-    observation_path=DATA_FILE_PATH,
+    observation_path=hdfs_data_file,
     event_timestamp_column=TIMESTAMP_COL,
     timestamp_format=TIMESTAMP_FORMAT,
 )
+
+execution_configurations={'spark.yarn.archive': nn_url_prefix + '/spark-jar/spark-libs.jar'}
 client.get_offline_features(
     observation_settings=settings,
     feature_query=query,
-    output_path=offline_features_path,
+    output_path = hdfs_workspace_dir + '/' + offline_features_path,
+    execution_configurations=execution_configurations,
 )
-
 client.wait_job_to_finish(timeout_sec=5000)
 
+# copy to local for further debug
+local_dir = os.path.join(local_workspace_dir, offline_features_path)
+os.makedirs(local_dir, exist_ok=True)
+fs.copy_files(nn_url_prefix + hdfs_workspace_dir + '/' + offline_features_path, local_dir)
+
+# debug check
 from feathr.utils.job_utils import get_result_df
 res_df = get_result_df(client)
 print(res_df.head())

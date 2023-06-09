@@ -285,17 +285,24 @@ class DbRegistry(Registry):
                 query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name)) 
                 r = self._fetch_helper(query)
             else:
-                c.execute(f'''select entity_id, entity_type, attributes from entities where qualified_name = %s''',
-                        definition.qualified_name)
+                print('--------------a-----------')
+                c.execute(f"select entity_id, entity_type, attributes from entities where qualified_name = %s" ,
+                        (definition.qualified_name,))
+                print(definition.qualified_name)
+                print(type(definition.qualified_name))
+                print('--------------b-----------')
                 r = c.fetchall()
+                print(r)
             if r:
                 if len(r) > 1:
                     assert False, "Data inconsistency detected, %d entities have same qualified_name %s" % (
                         len(r), definition.qualified_name)
+                print('--------------x1')
                 # The entity with same name already exists but with different type
                 if _to_type(r[0]["entity_type"], EntityType) != EntityType.Project:
                     raise ConflictError("Entity %s already exists" %
                                      definition.qualified_name)
+                print('--------------x2')
                 # Just return the existing project id
                 return _to_uuid(r[0]["entity_id"])
             id = uuid4()
@@ -320,14 +327,17 @@ class DbRegistry(Registry):
                 query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name)) 
                 r = self._fetch_helper(query)
             else:
-                c.execute(f'''select entity_id, entity_type, attributes from entities where qualified_name = %s''',
-                        definition.qualified_name)
+                c.execute(f"select entity_id, entity_type, attributes from entities where qualified_name = %s",
+                        (definition.qualified_name,))
                 r = c.fetchall()
             if r:
+                print(r)
+                print('datasource ================1')
                 if len(r) > 1:
                     # There are multiple entities with same qualified name， that means we already have errors in the db
                     assert False, "Data inconsistency detected, %d entities have same qualified_name %s" % (
                         len(r), definition.qualified_name)
+                print('datasource ================2')
                 # The entity with same name already exists but with different type
                 if _to_type(r[0]["entity_type"], EntityType) != EntityType.Source:
                     raise ConflictError("Entity %s already exists" %
@@ -343,6 +353,7 @@ class DbRegistry(Registry):
                     # Creating exactly same entity
                     # Just return the existing id
                     return _to_uuid(r[0]["entity_id"])
+                print('datasource ================5')
                 raise ConflictError("Entity %s already exists" %
                                  definition.qualified_name)
             id = uuid4()
@@ -369,8 +380,8 @@ class DbRegistry(Registry):
                 query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name)) 
                 r = self._fetch_helper(query)
             else:
-                c.execute(f'''select entity_id, entity_type, attributes from entities where qualified_name = %s''',
-                        definition.qualified_name)
+                c.execute(f"select entity_id, entity_type, attributes from entities where qualified_name = %s",
+                        (definition.qualified_name,))
                 r = c.fetchall()
             if r:
                 if len(r) > 1:
@@ -431,8 +442,8 @@ class DbRegistry(Registry):
                 query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name)) 
                 r = self._fetch_helper(query)
             else:
-                c.execute(f'''select entity_id, entity_type, attributes from entities where qualified_name = %s''',
-                        definition.qualified_name)
+                c.execute(f"select entity_id, entity_type, attributes from entities where qualified_name = %s",
+                        (definition.qualified_name,))
                 r = c.fetchall()
             if r:
                 if len(r) > 1:
@@ -487,8 +498,8 @@ class DbRegistry(Registry):
                 query = db.select(self.entities_table.c.entity_id, self.entities_table.c.entity_type, self.entities_table.c.attributes).where((self.entities_table.c.qualified_name == definition.qualified_name)) 
                 r = self._fetch_helper(query)
             else:
-                c.execute(f'''select entity_id, entity_type, attributes from entities where qualified_name = %s''',
-                        definition.qualified_name)
+                c.execute(f"select entity_id, entity_type, attributes from entities where qualified_name = %s",
+                        (definition.qualified_name,))
                 r = c.fetchall()
             if r:
                 if len(r) > 1:
@@ -523,6 +534,10 @@ class DbRegistry(Registry):
                     r1 = c.fetchall()
                 if len(r1) != len(definition.input_anchor_features):
                     # TODO: More detailed error
+                    print(r1)
+                    print(len(r1))
+                    print(definition.input_anchor_features)
+                    print(len(definition.input_anchor_features))
                     raise(ValueError("Missing input anchor features"))
             # Fill `input_derived_features`, from `definition` we have ids only, we still need qualified names
             r2 = []
@@ -569,20 +584,26 @@ class DbRegistry(Registry):
             query = db.insert(self.edges_table).values(edge_id= str(uuid4()), from_id=str(from_id), to_id=str(to_id), conn_type =type.name)
             self.connection.execute(query)
         else:
-            sql = r'''
-            IF NOT EXISTS (SELECT 1 FROM edges WHERE from_id=%(from_id)s and to_id=%(to_id)s and conn_type=%(type)s)
-                    BEGIN
-                        INSERT INTO edges
-                        (edge_id, from_id, to_id, conn_type)
-                        values
-                        (%(edge_id)s, %(from_id)s, %(to_id)s, %(type)s)
-                    END'''
-            cursor.execute(sql, {
-                "edge_id": str(uuid4()),
+            sql_sel = f"SELECT 1 FROM edges WHERE from_id=%(from_id)s and to_id=%(to_id)s and conn_type=%(type)s"
+            cursor.execute(sql_sel, {
                 "from_id": str(from_id),
                 "to_id": str(to_id),
                 "type": type.name
             })
+            r1 = cursor.fetchall()
+            if(len(r1)<1):
+                sql = r'''
+                            INSERT INTO edges
+                            (edge_id, from_id, to_id, conn_type)
+                            values
+                            (%(edge_id)s, %(from_id)s, %(to_id)s, %(type)s)
+                        '''
+                cursor.execute(sql, {
+                    "edge_id": str(uuid4()),
+                    "from_id": str(from_id),
+                    "to_id": str(to_id),
+                    "type": type.name
+                })
     
     def _delete_all_entity_edges(self, cursor, entity_id: UUID):
         """
@@ -673,7 +694,7 @@ class DbRegistry(Registry):
             select entity_id, qualified_name, entity_type, attributes
             from entities
             where entity_id = %s
-        ''', self.get_entity_id(id_or_name))
+        ''', str(self.get_entity_id(id_or_name)))
         if not row:
             raise KeyError(f"Entity {id_or_name} not found")
         row=row[0]

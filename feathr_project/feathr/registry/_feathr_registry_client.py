@@ -151,16 +151,16 @@ class _FeatureRegistry(FeathrRegistry):
         return id
 
     def _get(self, path: str) -> dict:
-        logging.debug("PATH: ", path)
+        logging.debug("PATH: %s", path)
         return check(requests.get(f"{self.endpoint}{path}", headers=self._get_auth_header())).json()
     
     def _delete(self, path: str) -> dict:
-        logging.debug("PATH: ", path)
+        logging.debug("PATH: %s", path)
         return check(requests.delete(f"{self.endpoint}{path}", headers=self._get_auth_header())).json()
 
     def _post(self, path: str, body: dict) -> dict:
-        logging.debug("PATH: ", path)
-        logging.debug("BODY: ", json.dumps(body, indent=2))
+        logging.debug("PATH: %s", path)
+        logging.debug("BODY: %s", json.dumps(body, indent=2))
         return check(requests.post(f"{self.endpoint}{path}", headers=self._get_auth_header(), json=body)).json()
 
     def _get_auth_header(self) -> dict:

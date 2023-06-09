@@ -15,6 +15,7 @@ from feathr.constants import OUTPUT_PATH_TAG
 from feathr.version import get_maven_artifact_fullname
 from feathr.spark_provider._abc import SparkJobLauncher
 
+from pyarrow import fs
 
 class _FeathrLocalSparkJobLauncher(SparkJobLauncher):
     """Class to interact with local Spark. This class is not intended to be used in Production environments.
@@ -32,6 +33,8 @@ class _FeathrLocalSparkJobLauncher(SparkJobLauncher):
         clean_up: bool = True,
         retry: int = 3,
         retry_sec: int = 30,
+        dfs_prefix: str = "",
+        dfs_workspace: str = "",
     ):
         """Initialize the Local Spark job launcher"""
         self.workspace_path = (workspace_path,)
@@ -43,9 +46,23 @@ class _FeathrLocalSparkJobLauncher(SparkJobLauncher):
         self.packages = self._get_default_package()
         self.master = master or "local[*]"
         self.job_tags = None
+        self.dfs_prefix = dfs_prefix
+        self.dfs_workspace = dfs_workspace
 
     def upload_or_get_cloud_path(self, local_path_or_http_path: str):
         """For Local Spark Case, no need to upload to cloud workspace."""
+        logger.info('uploading ' + local_path_or_http_path + ' to master ' + self.master)
+        # Cluster, copy 
+        if self.dfs_prefix is not None:
+            remote_fname = local_path_or_http_path.replace(self.workspace_path[0],'')
+            sep = ''
+            if not remote_fname.startswith('/'):
+                sep = '/'
+            remote_path = self.dfs_workspace + sep + remote_fname
+            fs.copy_files(local_path_or_http_path, self.dfs_prefix + remote_path)
+            print("copy file %s to dfs: %s" % (local_path_or_http_path, self.dfs_prefix + remote_path))
+            return remote_path
+
         return local_path_or_http_path
 
     def submit_feathr_job(
@@ -149,6 +166,7 @@ class _FeathrLocalSparkJobLauncher(SparkJobLauncher):
 
         return proc
 
+    # TODO: only pyspark or local spark will write output file
     def wait_for_completion(self, timeout_seconds: Optional[float] = 500) -> bool:
         """This function track local spark job commands and process status.
         Files will be write into `debug` folder under your workspace.
@@ -327,3 +345,34 @@ class _FeathrLocalSparkJobLauncher(SparkJobLauncher):
         packages.append("org.apache.hadoop:hadoop-azure:2.7.4")
         packages.append("com.microsoft.azure:azure-storage:8.6.4")
         return ",".join(packages)
+
+    def get_full_path(self, res_url: str):
+        """
+        get the full path with prefix 'hdfs://namenode:port/' 
+        """
+        if self.dfs_prefix is not None:
+            return self.dfs_prefix + res_url
+        return res_url
+
+    def get_short_path(self, res_url: str):
+        return res_url.replace(self.dfs_prefix, '').replace(self.dfs_workspace,'')
+
+    def download_result(self, result_path: str, local_folder: str, is_file_path: bool = False):
+        """
+        Supports downloading files from the result folder. Only support paths starts with `hdfs://` and only support downloading files in one folder (per Spark's design, everything will be in the result folder in a flat manner)
+        """
+        if not result_path.startswith("hdfs") and self.dfs_prefix is not None:
+            result_path = self.dfs_prefix + result_path
+            print("add dfs_prefix as result path:" + result_path)
+
+        logger.info("copy file from {} to {} is_file_path:", result_path, local_folder, is_file_path)
+
+        local_dir = local_folder
+        if is_file_path:
+            local_dir = os.path.dirname(local_folder)
+        if not os.path.isdir(local_dir):
+            logger.info("making dir {}", local_dir)
+            os.makedirs(local_dir)
+        
+        fs.copy_files(result_path, local_folder)
+        

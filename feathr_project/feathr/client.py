@@ -187,9 +187,12 @@ class FeathrClient(object):
             self._FEATHR_JOB_JAR_PATH = \
                 self.env_config.get(
                     'spark_config__local__feathr_runtime_location')
+            print(type(self.env_config.get('spark_config__local__dfs_workspace')))
             self.feathr_spark_launcher = _FeathrLocalSparkJobLauncher(
                 workspace_path = self.env_config.get('spark_config__local__workspace'),
-                master = self.env_config.get('spark_config__local__master')
+                master = self.env_config.get('spark_config__local__master'),
+                dfs_prefix = self.env_config.get('spark_config__local__dfs_prefix'),
+                dfs_workspace = self.env_config.get('spark_config__local__dfs_workspace')
                 )
 
 
@@ -518,6 +521,7 @@ class FeathrClient(object):
         for feature_query in feature_queries:
             for feature_name in feature_query.feature_list:
                 feature_names.append(feature_name)
+        print("------------", feature_names);
         
         if len(feature_names) > 0 and observation_settings.conflicts_auto_correction is None:
             import feathr.utils.job_utils as job_utils
@@ -578,8 +582,13 @@ class FeathrClient(object):
         Args:
           feature_join_conf_path: Relative path to your feature join config file.
         """
+        # first python use local path 
         cloud_udf_paths = [self.feathr_spark_launcher.upload_or_get_cloud_path(udf_local_path) for udf_local_path in udf_files]
         feathr_feature = ConfigFactory.parse_file(feature_join_conf_path)
+        # trick fix, the first file don't is used for submit.
+        if self.spark_runtime == 'local' and len(cloud_udf_paths)>0:
+           cloud_udf_paths[0] = udf_files[0]
+
 
         feature_join_job_params = FeatureJoinJobParams(join_config_path=os.path.abspath(feature_join_conf_path),
                                                        observation_path=feathr_feature['observationPath'],
@@ -849,6 +858,9 @@ class FeathrClient(object):
         if monitoring_config_str:
             arguments.append('--monitoring-config')
             arguments.append(monitoring_config_str)
+        if self.spark_runtime == 'local':
+            cloud_udf_paths = udf_files
+
         return self.feathr_spark_launcher.submit_feathr_job(
             job_name=self.project_name + '_feathr_feature_materialization_job',
             main_jar_path=self._FEATHR_JOB_JAR_PATH,

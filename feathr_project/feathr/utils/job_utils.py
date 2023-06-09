@@ -120,11 +120,8 @@ def get_result_df(
         )
 
     if client.spark_runtime == "local":
-        if local_cache_path is not None:
-            logger.warning(
-                "In local spark mode, the result files are expected to be stored at a local storage and thus `local_cache_path` argument will be ignored."
-            )
-        local_cache_path = res_url
+        local_cache_path = client.local_workspace_dir + client.feathr_spark_launcher.get_short_path(res_url)
+        res_url = client.feathr_spark_launcher.get_full_path(res_url)
 
     elif client.spark_runtime == "databricks":
         if not res_url.startswith("dbfs:"):
@@ -144,7 +141,7 @@ def get_result_df(
         local_cache_path = TemporaryDirectory().name
 
     if local_cache_path != res_url:
-        logger.info(f"{res_url} files will be downloaded into {local_cache_path}")
+        logger.info(f"{res_url} files will be downloaded into {local_cache_path} with is_file_path:{is_file_path}")
         client.feathr_spark_launcher.download_result(result_path=res_url, local_folder=local_cache_path, is_file_path = is_file_path)
 
     result_df = None
@@ -230,7 +227,8 @@ def get_cloud_file_column_names(client: FeathrClient, path: str, format: str = "
     
     try:
         df = get_result_df(client=client, data_format=format, res_url=path, is_file_path = is_file_path)
-    except:
+    except Exception as e:
+        logger.warning(e)
         logger.warning(f"failed to load cloud files from the path: {path} because of lack of permission or invalid path.")
         return None
     if df is None:

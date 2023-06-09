@@ -1,0 +1,29 @@
+
+api_version: 1
+project_config:
+  project_name: 'on_premise_fraud_detection'
+
+spark_config:
+  # choice for spark runtime. Currently support: azure_synapse, databricks, local
+  spark_cluster: 'local'
+  spark_result_output_parts: '1'
+  debug_enabled: '1'
+  local:
+    # master: 'local[*]'
+    master: 'yarn'
+    workspace: '/tmp/feathr-demo-workspace'
+    dfs_prefix: 'hdfs://m01:9000'
+    dfs_workspace: '/tmp/feathr-samples-ws' # protocol not included
+    spark_yarn_archive: 'hdfs://m01:9000/share/spark340-hadoop3-jars.zip'
+    feathr_runtime_location: "feathr_2.12-1.0.4-rc10.jar"
+
+online_store:
+  redis:
+    # Redis configs to access Redis cluster
+    host: '192.168.122.1'
+    port: 6379
+    ssl_enabled: False
+
+feature_registry:
+  # The API endpoint of the registry service
+  api_endpoint: "http://192.168.122.1:8000/api/v1"

@@ -564,7 +564,10 @@ private[offline] object FeatureTransformation {
           res.toMap
         }
     }
-    futures.map(k => Await.result(k, Duration.Inf)).reduce(_ ++ _)
+    val ret = futures.map(k => Await.result(k, Duration.Inf)).reduce(_ ++ _)
+    //close the executionService to avoid finished spark application process hangs.
+    executionService.shutdown()
+    ret
   }
 
   /**

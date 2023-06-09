@@ -107,6 +107,113 @@ class SQLiteConnection(DbConnection):
             if conn:
                 conn.commit()
 
+import psycopg2
+import psycopg2.extras
+import traceback
+psycopg2.extras.register_uuid()
+class PostgresConnection(DbConnection):
+    @staticmethod
+    def connect(autocommit = True):
+        conn_str = os.environ["CONNECTION_STR"]
+        if "dbname=" not in conn_str:
+            logging.debug("`CONNECTION_STR` is not in psycopg2 connection string format")
+            return None
+        params = {}
+        params['connection_str'] = conn_str
+        if not autocommit:
+            params["autocommit"] = False
+        return PostgresConnection(params)
+
+    def __init__(self, params):
+        self.params = params
+        self.make_connection()
+        self.mutex = threading.Lock()
+
+    def make_connection(self):
+        print(self.params['connection_str'])
+        self.conn = psycopg2.connect(self.params['connection_str'])
+
+    def query(self, sql: str, *args, **kwargs) -> List[Dict]:
+        """
+        Make SQL query and return result
+        """
+        logging.debug(f"SQL: `{sql}`")
+        # NOTE: Only one cursor is allowed at the same time
+        retry = 0
+        while True:
+            try:
+                with self.mutex:
+                    #c = self.conn.cursor()
+                    c = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                    print('====type:', type(args))
+                    if(len(args)==0):
+                        print('============ args 0 =========')
+                        c.execute(sql, args)
+                    elif(len(args)==1 and type(args) is tuple and type(args[0]) is dict):
+                        print('============ args 1 =========')
+                        c.execute(sql, args[0])
+                    elif(len(args)==1 and type(args) is tuple and type(args[0]) is not tuple):
+                        print('less than 1, idx 0 is not tuple')
+                        c.execute(sql, args)
+                    elif(len(args)==1 and type(args) is tuple and type(args[0]) is tuple):
+                        print('============ args 2 =========')
+                        c.execute(sql, args[0])
+                    else:
+                        print('check this ...')
+                        c.execute(sql, args[0])
+
+                    return c.fetchall()
+            except Exception as e:
+                print(sql, args, 'postgres query exception')
+                print(e.args)
+
+                logging.warning("Database error, retrying...")
+                # Reconnect
+                self.make_connection()
+                retry += 1
+                if retry >= 3:
+                    # Stop retrying
+                    raise
+                pass
+
+    @contextmanager
+    def transaction(self):
+        """
+        Start a transaction so we can run multiple SQL in one batch.
+        User should use `with` with the returned value, look into db_registry.py for more real usage.
+
+        NOTE: `self.query` and `self.execute` will use a different MSSQL connection so any change made
+        in this transaction will *not* be visible in these calls.
+
+        The minimal implementation could look like this if the underlying engine doesn't support transaction.
+        ```
+        @contextmanager
+        def transaction(self):
+            try:
+                c = self.create_or_get_connection(...)
+                yield c
+            finally:
+                c.close(...)
+        ```
+        """
+        conn = None
+        cursor = None
+        try:
+            # As one MssqlConnection has only one connection, we need to create a new one to disable `autocommit`
+            conn = PostgresConnection.connect(autocommit=False).conn
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            yield cursor
+        except Exception as e:
+            print(e)
+            print(traceback.format_exc())
+            print('e ..............in tx')
+            logging.warning(f"Exception: {e}")
+            if conn:
+                conn.rollback()
+            raise e
+        finally:
+            if conn:
+                conn.commit()
 
 class MssqlConnection(DbConnection):
     @staticmethod
@@ -191,6 +298,7 @@ class MssqlConnection(DbConnection):
 # This is ordered list. So append SQLite first
 if os.environ.get("FEATHR_SANDBOX"):
     providers.append(SQLiteConnection)
+providers.append(PostgresConnection)
 providers.append(MssqlConnection)
 
 

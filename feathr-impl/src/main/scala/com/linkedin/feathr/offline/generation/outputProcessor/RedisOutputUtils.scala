@@ -106,7 +106,9 @@ object RedisOutputUtils {
             }
           case StringType =>
             (rowData: Any) => {
-              val stringFeature = rowData.asInstanceOf[String]
+              var stringFeature = rowData.asInstanceOf[String]
+              if (stringFeature == null)
+                stringFeature = ""
               val res = FeatureValueOuterClass.FeatureValue.newBuilder().setStringValue(stringFeature).build()
               Base64.getEncoder.encodeToString(res.toByteArray)
             }
