@@ -2,6 +2,7 @@ from copy import deepcopy
 from datetime import datetime
 import json
 import os
+import pathlib
 from pathlib import Path
 from shlex import split
 from subprocess import STDOUT, Popen
@@ -48,19 +49,23 @@ class _FeathrLocalSparkJobLauncher(SparkJobLauncher):
         self.job_tags = None
         self.dfs_prefix = dfs_prefix
         self.dfs_workspace = dfs_workspace
+        self.dfs_tmp_path = datetime.now().strftime('%m%d%H%M%S')
 
     def upload_or_get_cloud_path(self, local_path_or_http_path: str):
         """For Local Spark Case, no need to upload to cloud workspace."""
         logger.info('uploading ' + local_path_or_http_path + ' to master ' + self.master)
         # Cluster, copy 
         if self.dfs_prefix is not None:
-            remote_fname = local_path_or_http_path.replace(self.workspace_path[0],'')
-            sep = ''
-            if not remote_fname.startswith('/'):
-                sep = '/'
-            remote_path = self.dfs_workspace + sep + remote_fname
+            if(local_path_or_http_path.startswith(self.workspace_path[0])):
+                remote_rel_path = local_path_or_http_path.replace(self.workspace_path[0],'')
+            else:
+                remote_rel_path = pathlib.Path(local_path_or_http_path).name
+            if not remote_rel_path.startswith('/'):
+                remote_rel_path = '/' + remote_rel_path
+            remote_path = self.dfs_workspace + "/" + self.dfs_tmp_path + remote_rel_path
+
+            logger.info("copying files %s to dfs: %s" % (local_path_or_http_path, self.dfs_prefix + remote_path))
             fs.copy_files(local_path_or_http_path, self.dfs_prefix + remote_path)
-            print("copy file %s to dfs: %s" % (local_path_or_http_path, self.dfs_prefix + remote_path))
             return remote_path
 
         return local_path_or_http_path

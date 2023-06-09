@@ -13,19 +13,17 @@ from feathr.utils.job_utils import get_result_df
 
 from feathr import FeathrClient
 
-DO_GET_OFFLINE = True
+DO_GET_OFFLINE = False
 DO_MODEL = False
 DO_MATERIALIZE = False
 
 
-PROJECT_NAME = "hc-default-risk"
+PROJECT_NAME = "hc-default-risk.v1"
 os.environ['project_config__project_name'] = PROJECT_NAME
 
 # To use python parameter
 feathr_config_path = './feathr_config.yaml'
-
-local_workspace_dir = '/tmp/feathr-demo-local-workspace'
-client = FeathrClient(feathr_config_path,local_workspace_dir)
+client = FeathrClient(feathr_config_path)
 
 # ----------------------------------------------
 # register features

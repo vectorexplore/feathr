@@ -85,6 +85,8 @@ class FeathrClient(object):
         self.env_config = EnvConfigReader(config_path=config_path)
         if local_workspace_dir:
             self.local_workspace_dir = local_workspace_dir
+        elif self.env_config.get('spark_config__local__workspace') is not None:
+            self.local_workspace_dir = self.env_config.get('spark_config__local__workspace')
         else:
             # this is required for Windows
             tem_dir_obj = tempfile.TemporaryDirectory()
@@ -95,7 +97,7 @@ class FeathrClient(object):
 
         # Load all configs from yaml at initialization
         # DO NOT load any configs from yaml during runtime.
-        self.project_name = self.env_config.get(
+        self.project_name = self.env_config.get( 
             'project_config__project_name')
 
         # Redis configs. This is optional unless users have configured Redis host.
@@ -187,7 +189,6 @@ class FeathrClient(object):
             self._FEATHR_JOB_JAR_PATH = \
                 self.env_config.get(
                     'spark_config__local__feathr_runtime_location')
-            print(type(self.env_config.get('spark_config__local__dfs_workspace')))
             self.feathr_spark_launcher = _FeathrLocalSparkJobLauncher(
                 workspace_path = self.env_config.get('spark_config__local__workspace'),
                 master = self.env_config.get('spark_config__local__master'),
