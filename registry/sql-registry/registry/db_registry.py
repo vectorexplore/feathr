@@ -628,7 +628,7 @@ class DbRegistry(Registry):
             self.sql_session.commit()
         else:
             sql = fr'''DELETE FROM entities WHERE entity_id = %s'''
-            cursor.execute(sql, str(entity_id))
+            cursor.execute(sql, (str(entity_id),))
 
     def _fill_entity(self, e: Entity) -> Entity:
         """
