@@ -54,7 +54,7 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
               查看血缘关系
             </Button>
             <Popconfirm
-              title="Are you sure to delete this project?"
+              title={`您确认要删除项目${name}吗？`}
               placement="topRight"
               onConfirm={() => {
                 return new Promise((resolve) => {
@@ -98,7 +98,7 @@ const ProjectTable = (props: ProjectTableProps, ref: any) => {
   const onDelete = async (entity: string, resolve: (value?: unknown) => void) => {
     try {
       await deleteEntity(entity)
-      message.success('The project is deleted successfully.')
+      message.success('项目' + entity + '已经成功删除。')
 
       refetch()
     } catch (e: any) {

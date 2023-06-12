@@ -4,3 +4,7 @@ cp src/pages/Home/index_zh.tsx src/pages/Home/index.tsx
 cp src/components/HeaderBar/header_zh.tsx src/components/HeaderBar/header.tsx
 cp src/pages/Projects/components/ProjectTable/index_zh.tsx src/pages/Projects/components/ProjectTable/index.tsx
 cp src/pages/DataSources/components/DataSourceTable/index_zh.tsx src/pages/DataSources/components/DataSourceTable/index.tsx
+cp public/index_zh.html public/index.html
+cp src/components/SwitchProjectModal/index_zh.tsx src/components/SwitchProjectModal/index.tsx
+cp src/pages/Features/components/FeatureTable/index_zh.tsx src/pages/Features/components/FeatureTable/index.tsx
+cp src/pages/NewFeature/index_zh.tsx src/pages/NewFeature/index.tsx

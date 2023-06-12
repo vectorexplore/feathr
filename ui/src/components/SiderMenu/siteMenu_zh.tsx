@@ -110,14 +110,14 @@ const SideMenu = (props: SiderMenuProps) => {
       <Sider className={styles.siderMenu} theme="dark" width={siderWidth}>
         <Title
           style={{
-            fontSize: '36px',
+            fontSize: '24px',
             color: 'white',
             margin: '10px',
-            paddingLeft: '35px'
+            paddingLeft: '15px'
           }}
           level={1}
         >
-          Feathr
+          特征平台
         </Title>
         <Menu
           theme="dark"

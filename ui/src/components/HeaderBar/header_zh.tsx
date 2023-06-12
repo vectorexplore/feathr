@@ -36,13 +36,6 @@ const Header = () => {
           )}
         </span>
         <span className={styles.right}>
-          <Link
-            className={styles.action}
-            href="https://github.com/feathr-ai/feathr"
-            target="_blank"
-          >
-            <GithubOutlined />
-          </Link>
           <HeaderWidget username={account?.username} />
         </span>
       </Layout.Header>

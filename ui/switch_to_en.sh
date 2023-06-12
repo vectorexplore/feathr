@@ -4,3 +4,7 @@ git checkout -- src/pages/Home/index.tsx
 git checkout -- src/components/HeaderBar/header.tsx
 git checkout -- src/pages/Projects/components/ProjectTable/index.tsx
 git checkout -- src/pages/DataSources/components/DataSourceTable/index.tsx
+git checkout -- public/index.html
+git checkout -- src/components/SwitchProjectModal/index.tsx
+git checkout -- src/pages/Features/components/FeatureTable/index.tsx
+git checkout -- src/pages/NewFeature/index.tsx
