@@ -15,10 +15,13 @@ git checkout -- src/pages/DataSources/index.tsx
 git checkout -- src/pages/DataSources/components/DataSourceTable/index.tsx
 git checkout -- src/pages/DataSources/components/SearchBar/index.tsx
 
+git checkout -- src/pages/DataSourceDetails/index.tsx
+
 git checkout -- src/pages/Features/components/FeatureTable/index.tsx
 git checkout -- src/pages/NewFeature/index.tsx
 git checkout -- src/pages/Features/components/SearchBar/index.tsx
 git checkout -- src/pages/Features/index.tsx
 git checkout -- src/pages/Features/components/NodeDetails/index.tsx
+git checkout -- src/pages/FeatureDetails/index.tsx
 
 git checkout -- src/pages/ProjectLineage/index.tsx

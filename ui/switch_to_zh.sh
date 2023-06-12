@@ -15,10 +15,13 @@ cp src/pages/DataSources/index_zh.tsx src/pages/DataSources/index.tsx
 cp src/pages/DataSources/components/DataSourceTable/index_zh.tsx src/pages/DataSources/components/DataSourceTable/index.tsx
 cp src/pages/DataSources/components/SearchBar/index_zh.tsx src/pages/DataSources/components/SearchBar/index.tsx
 
+cp src/pages/DataSourceDetails/index_zh.tsx src/pages/DataSourceDetails/index.tsx
+
 cp src/pages/Features/components/FeatureTable/index_zh.tsx src/pages/Features/components/FeatureTable/index.tsx
 cp src/pages/NewFeature/index_zh.tsx src/pages/NewFeature/index.tsx
 cp src/pages/Features/components/SearchBar/index_zh.tsx src/pages/Features/components/SearchBar/index.tsx
 cp src/pages/Features/index_zh.tsx src/pages/Features/index.tsx
 cp src/pages/Features/components/NodeDetails/index_zh.tsx src/pages/Features/components/NodeDetails/index.tsx
+cp src/pages/FeatureDetails/index_zh.tsx src/pages/FeatureDetails/index.tsx
 
 cp src/pages/ProjectLineage/index_zh.tsx src/pages/ProjectLineage/index.tsx
